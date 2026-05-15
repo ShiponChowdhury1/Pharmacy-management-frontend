@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import toast from "react-hot-toast";
+import { useRegisterMutation } from "../../store/features/auth/authApi";
+import { setTempEmail } from "../../store/features/auth/authSlice";
 
 const steps = ["Account", "Pharmacy", "Verify", "Done"];
 
@@ -20,9 +24,110 @@ function UploadBox({ icon, label }) {
 
 export default function PharmacyRegister() {
   const [current, setCurrent] = useState(0);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const goNext = () => setCurrent((p) => Math.min(p + 1, 3));
+  // Form state for all 3 steps
+  const [form, setForm] = useState({
+    // Step 1 — Account Info
+    fullName: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+    role: "",
+    // Step 2 — Pharmacy Info
+    pharmacyName: "",
+    address: "",
+    city: "",
+    district: "",
+    pharmacyPhone: "",
+    licenseNumber: "",
+    pharmacyEmail: "",
+    // Step 3 — Verification
+    nidNumber: "",
+    drugLicenseNo: "",
+    ownerName: "",
+    agreeTerms: false,
+  });
+
+  const [register, { isLoading }] = useRegisterMutation();
+
+  const update = (key, val) => setForm((p) => ({ ...p, [key]: val }));
+
   const goBack = () => setCurrent((p) => Math.max(p - 1, 0));
+
+  // Validate each step
+  const validateStep = () => {
+    if (current === 0) {
+      if (!form.fullName || !form.email || !form.phone || !form.password || !form.confirmPassword || !form.role) {
+        toast.error("Please fill all account fields");
+        return false;
+      }
+      if (form.password.length < 8) {
+        toast.error("Password must be at least 8 characters");
+        return false;
+      }
+      if (form.password !== form.confirmPassword) {
+        toast.error("Passwords do not match");
+        return false;
+      }
+    }
+    if (current === 1) {
+      if (!form.pharmacyName || !form.address || !form.city || !form.district || !form.pharmacyPhone || !form.licenseNumber) {
+        toast.error("Please fill all pharmacy fields");
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const goNext = () => {
+    if (!validateStep()) return;
+    setCurrent((p) => Math.min(p + 1, 3));
+  };
+
+  // Submit registration to the API (Step 3 → Submit)
+  const handleSubmit = async () => {
+    if (!form.nidNumber || !form.drugLicenseNo || !form.ownerName) {
+      toast.error("Please fill all verification fields");
+      return;
+    }
+    if (!form.agreeTerms) {
+      toast.error("Please agree to the Terms & Conditions");
+      return;
+    }
+
+    const payload = {
+      fullName: form.fullName,
+      email: form.email,
+      phone: form.phone,
+      password: form.password,
+      confirmPassword: form.confirmPassword,
+      role: form.role.toLowerCase(),
+      pharmacyName: form.pharmacyName,
+      address: form.address,
+      city: form.city,
+      district: form.district,
+      pharmacyPhone: form.pharmacyPhone,
+      licenseNumber: form.licenseNumber,
+      pharmacyEmail: form.pharmacyEmail,
+      nidNumber: form.nidNumber,
+      drugLicenseNo: form.drugLicenseNo,
+      ownerName: form.ownerName,
+    };
+
+    try {
+      const res = await register(payload).unwrap();
+      toast.success(res.message || "Registration OTP sent to your email");
+      // Save email + purpose so OTP page knows context
+      dispatch(setTempEmail({ email: form.email, purpose: "register" }));
+      // Navigate to OTP verification
+      navigate("/otp-verify");
+    } catch (err) {
+      toast.error(err?.data?.message || "Registration failed. Please try again.");
+    }
+  };
 
   const progressWidth = `${((current + 1) / steps.length) * 100}%`;
 
@@ -77,34 +182,34 @@ export default function PharmacyRegister() {
               </h2>
               <div>
                 <label className={labelCls}>Full Name</label>
-                <input className={inputCls} placeholder="e.g. Md. Rahim Uddin" />
+                <input className={inputCls} placeholder="e.g. Md. Rahim Uddin" value={form.fullName} onChange={(e) => update("fullName", e.target.value)} />
               </div>
               <div>
                 <label className={labelCls}>Email Address</label>
-                <input className={inputCls} type="email" placeholder="example@email.com" />
+                <input className={inputCls} type="email" placeholder="example@email.com" value={form.email} onChange={(e) => update("email", e.target.value)} />
               </div>
               <div>
                 <label className={labelCls}>Phone Number</label>
-                <input className={inputCls} type="tel" placeholder="+880 1XXX-XXXXXX" />
+                <input className={inputCls} type="tel" placeholder="+880 1XXX-XXXXXX" value={form.phone} onChange={(e) => update("phone", e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Password</label>
-                  <input className={inputCls} type="password" placeholder="Min 8 chars" />
+                  <input className={inputCls} type="password" placeholder="Min 8 chars" value={form.password} onChange={(e) => update("password", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelCls}>Confirm Password</label>
-                  <input className={inputCls} type="password" placeholder="Re-enter" />
+                  <input className={inputCls} type="password" placeholder="Re-enter" value={form.confirmPassword} onChange={(e) => update("confirmPassword", e.target.value)} />
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Role</label>
-                <select className={inputCls}>
+                <select className={inputCls} value={form.role} onChange={(e) => update("role", e.target.value)}>
                   <option value="">Select Role</option>
-                  <option>Admin</option>
-                  <option>Pharmacist</option>
-                  <option>Manager</option>
-                  <option>Staff</option>
+                  <option value="admin">Admin</option>
+                  <option value="pharmacist">Pharmacist</option>
+                  <option value="manager">Manager</option>
+                  <option value="staff">Staff</option>
                 </select>
               </div>
             </div>
@@ -118,35 +223,35 @@ export default function PharmacyRegister() {
               </h2>
               <div>
                 <label className={labelCls}>Pharmacy Name</label>
-                <input className={inputCls} placeholder="e.g. Al-Amin Pharmacy" />
+                <input className={inputCls} placeholder="e.g. Al-Amin Pharmacy" value={form.pharmacyName} onChange={(e) => update("pharmacyName", e.target.value)} />
               </div>
               <div>
                 <label className={labelCls}>Street / Area Address</label>
-                <input className={inputCls} placeholder="Road, Area" />
+                <input className={inputCls} placeholder="Road, Area" value={form.address} onChange={(e) => update("address", e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>City</label>
-                  <input className={inputCls} placeholder="Dhaka" />
+                  <input className={inputCls} placeholder="Dhaka" value={form.city} onChange={(e) => update("city", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelCls}>District</label>
-                  <input className={inputCls} placeholder="District" />
+                  <input className={inputCls} placeholder="District" value={form.district} onChange={(e) => update("district", e.target.value)} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>Pharmacy Phone</label>
-                  <input className={inputCls} type="tel" placeholder="+880..." />
+                  <input className={inputCls} type="tel" placeholder="+880..." value={form.pharmacyPhone} onChange={(e) => update("pharmacyPhone", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelCls}>License Number</label>
-                  <input className={inputCls} placeholder="LIC-XXXX" />
+                  <input className={inputCls} placeholder="LIC-XXXX" value={form.licenseNumber} onChange={(e) => update("licenseNumber", e.target.value)} />
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Pharmacy Email (Optional)</label>
-                <input className={inputCls} type="email" placeholder="pharmacy@email.com" />
+                <input className={inputCls} type="email" placeholder="pharmacy@email.com" value={form.pharmacyEmail} onChange={(e) => update("pharmacyEmail", e.target.value)} />
               </div>
             </div>
           )}
@@ -160,21 +265,21 @@ export default function PharmacyRegister() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className={labelCls}>NID Number</label>
-                  <input className={inputCls} placeholder="17-digit NID" />
+                  <input className={inputCls} placeholder="17-digit NID" value={form.nidNumber} onChange={(e) => update("nidNumber", e.target.value)} />
                 </div>
                 <div>
                   <label className={labelCls}>Drug License No.</label>
-                  <input className={inputCls} placeholder="DL-XXXXX" />
+                  <input className={inputCls} placeholder="DL-XXXXX" value={form.drugLicenseNo} onChange={(e) => update("drugLicenseNo", e.target.value)} />
                 </div>
               </div>
               <div>
                 <label className={labelCls}>Owner Name</label>
-                <input className={inputCls} placeholder="Owner Full Name" />
+                <input className={inputCls} placeholder="Owner Full Name" value={form.ownerName} onChange={(e) => update("ownerName", e.target.value)} />
               </div>
               <UploadBox icon="📄" label="Upload Trade License" />
               <UploadBox icon="💊" label="Upload Drug License" />
               <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" className="mt-0.5 accent-emerald-600 w-4 h-4" />
+                <input type="checkbox" className="mt-0.5 accent-emerald-600 w-4 h-4" checked={form.agreeTerms} onChange={(e) => update("agreeTerms", e.target.checked)} />
                 <span className="text-xs text-gray-600 leading-relaxed">
                   I agree to the{" "}
                   <span className="text-emerald-600 font-semibold">Terms & Conditions</span>{" "}
@@ -217,19 +322,25 @@ export default function PharmacyRegister() {
             )}
             {current === 2 && (
               <button
-                onClick={goNext}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg transition-all"
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg transition-all disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Submit ✓
+                {isLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                    Submitting...
+                  </span>
+                ) : "Submit ✓"}
               </button>
             )}
             {current === 3 && (
-              <button
-                onClick={() => setCurrent(0)}
-                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md"
+              <Link
+                to="/login"
+                className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md text-center"
               >
                 Go to Login
-              </button>
+              </Link>
             )}
           </div>
 
@@ -237,8 +348,8 @@ export default function PharmacyRegister() {
             <p className="text-center text-xs text-gray-400 mt-4">
               Already have an account?{" "}
               <Link to="/login" className="text-emerald-600 font-semibold hover:underline">
-  Login here
-</Link>
+                Login here
+              </Link>
             </p>
           )}
         </div>

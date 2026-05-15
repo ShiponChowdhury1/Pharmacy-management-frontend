@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useDispatch } from "react-redux";
+import toast from "react-hot-toast";
+import { useForgotPasswordMutation } from "../../store/features/auth/authApi";
+import { setTempEmail } from "../../store/features/auth/authSlice";
 
 const inputCls =
   "w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100 transition-all placeholder:text-gray-400";
@@ -9,12 +13,28 @@ const labelCls =
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
 
-  const handleSubmit = (e) => {
+  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Call API to send OTP
-    setSent(true);
+    if (!email) {
+      toast.error("Please enter your email address");
+      return;
+    }
+
+    try {
+      const res = await forgotPassword({ email }).unwrap();
+      toast.success(res.message || "Password reset OTP sent to your email");
+      // Save email + purpose so OTP page knows it's for password reset
+      dispatch(setTempEmail({ email, purpose: "forgot-password" }));
+      // Navigate to OTP verification
+      navigate("/otp-verify");
+    } catch (err) {
+      toast.error(err?.data?.message || "Failed to send OTP. Please try again.");
+    }
   };
 
   return (
@@ -37,43 +57,32 @@ export default function ForgotPassword() {
             Enter your registered email. We'll send a 6-digit OTP to reset your password.
           </p>
 
-          {!sent ? (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className={labelCls}>Email Address</label>
-                <input
-                  className={inputCls}
-                  type="email"
-                  placeholder="example@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
-              >
-                Send OTP →
-              </button>
-            </form>
-          ) : (
-            <div className="text-center py-4 space-y-3">
-              <div className="text-5xl">📧</div>
-              <p className="text-sm font-semibold text-gray-700">OTP Sent!</p>
-              <p className="text-xs text-gray-400">
-                We sent a 6-digit OTP to <span className="text-emerald-600 font-semibold">{email}</span>.<br />
-                Please check your inbox.
-              </p>
-              <Link
-                to="/otp-verify"
-                className="inline-block w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all text-center"
-              >
-                Verify OTP →
-              </Link>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className={labelCls}>Email Address</label>
+              <input
+                className={inputCls}
+                type="email"
+                placeholder="example@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
-          )}
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  Sending...
+                </span>
+              ) : "Send OTP →"}
+            </button>
+          </form>
 
           <p className="text-center text-xs text-gray-400 mt-6">
             Remember your password?{" "}

@@ -1,5 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import toast from "react-hot-toast";
+import {
+  useVerifyRegisterOtpMutation,
+  useVerifyResetOtpMutation,
+  useResendOtpMutation,
+} from "../../store/features/auth/authApi";
+import { setCredentials, setTempEmail } from "../../store/features/auth/authSlice";
 
 export default function OtpVerify() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -7,6 +15,24 @@ export default function OtpVerify() {
   const [error, setError] = useState("");
   const inputs = useRef([]);
   const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // Get context from Redux
+  const { tempEmail, otpPurpose } = useSelector((state) => state.auth);
+
+  const [verifyRegisterOtp, { isLoading: isVerifyingRegister }] = useVerifyRegisterOtpMutation();
+  const [verifyResetOtp, { isLoading: isVerifyingReset }] = useVerifyResetOtpMutation();
+  const [resendOtp, { isLoading: isResending }] = useResendOtpMutation();
+
+  const isLoading = isVerifyingRegister || isVerifyingReset;
+
+  // Redirect if no email context
+  useEffect(() => {
+    if (!tempEmail) {
+      toast.error("No email found. Please start again.");
+      navigate("/login");
+    }
+  }, [tempEmail, navigate]);
 
   // Countdown timer
   useEffect(() => {
@@ -43,22 +69,55 @@ export default function OtpVerify() {
     inputs.current[Math.min(pasted.length, 5)].focus();
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const code = otp.join("");
     if (code.length < 6) {
       setError("Please enter all 6 digits.");
       return;
     }
-    // Call API to verify OTP
-    navigate("/reset-password");
+
+    const payload = { email: tempEmail, otp: code };
+
+    try {
+      if (otpPurpose === "register") {
+        // Verify register OTP → get user + token
+        const res = await verifyRegisterOtp(payload).unwrap();
+        toast.success(res.message || "Registration successful!");
+        // Save credentials to Redux
+        dispatch(
+          setCredentials({
+            user: res.user,
+            token: res.token,
+            refreshToken: res.refreshToken,
+          })
+        );
+        navigate("/admin");
+      } else if (otpPurpose === "forgot-password") {
+        // Verify reset OTP → go to reset password page
+        const res = await verifyResetOtp(payload).unwrap();
+        toast.success(res.message || "OTP verified!");
+        navigate("/reset-password");
+      } else {
+        toast.error("Unknown OTP purpose.");
+      }
+    } catch (err) {
+      const msg = err?.data?.message || "OTP verification failed. Please try again.";
+      setError(msg);
+      toast.error(msg);
+    }
   };
 
-  const handleResend = () => {
-    setTimer(60);
-    setOtp(["", "", "", "", "", ""]);
-    setError("");
-    // Call API to resend OTP
+  const handleResend = async () => {
+    try {
+      const res = await resendOtp({ email: tempEmail, purpose: otpPurpose }).unwrap();
+      toast.success(res.message || "OTP resent successfully!");
+      setTimer(60);
+      setOtp(["", "", "", "", "", ""]);
+      setError("");
+    } catch (err) {
+      toast.error(err?.data?.message || "Failed to resend OTP.");
+    }
   };
 
   return (
@@ -77,9 +136,12 @@ export default function OtpVerify() {
           <h2 className="text-base font-bold text-emerald-700 border-b border-emerald-100 pb-2 mb-2">
             🔢 Verify OTP
           </h2>
-          <p className="text-xs text-gray-400 mb-6">
+          <p className="text-xs text-gray-400 mb-1">
             Enter the 6-digit OTP sent to your email address.
           </p>
+          {tempEmail && (
+            <p className="text-xs text-emerald-600 font-semibold mb-6">{tempEmail}</p>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
 
@@ -120,9 +182,10 @@ export default function OtpVerify() {
                 <button
                   type="button"
                   onClick={handleResend}
-                  className="text-emerald-600 font-semibold hover:underline"
+                  disabled={isResending}
+                  className="text-emerald-600 font-semibold hover:underline disabled:opacity-50"
                 >
-                  Resend OTP
+                  {isResending ? "Sending..." : "Resend OTP"}
                 </button>
               )}
             </div>
@@ -130,16 +193,22 @@ export default function OtpVerify() {
             {/* Submit */}
             <button
               type="submit"
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+              disabled={isLoading}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Verify OTP →
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                  Verifying...
+                </span>
+              ) : "Verify OTP →"}
             </button>
           </form>
 
           <p className="text-center text-xs text-gray-400 mt-6">
             Back to{" "}
-            <Link to="/forgot-password" className="text-emerald-600 font-semibold hover:underline">
-              Forgot Password
+            <Link to="/login" className="text-emerald-600 font-semibold hover:underline">
+              Login
             </Link>
           </p>
         </div>

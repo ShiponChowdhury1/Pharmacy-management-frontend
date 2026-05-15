@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import toast from "react-hot-toast";
+import { useResetPasswordMutation } from "../../store/features/auth/authApi";
+import { clearTempData } from "../../store/features/auth/authSlice";
 
 const inputCls =
   "w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 outline-none focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-100 transition-all placeholder:text-gray-400";
@@ -13,7 +17,13 @@ export default function ResetPassword() {
   const [done, setDone] = useState(false);
   const [form, setForm] = useState({ newPassword: "", confirmPassword: "" });
   const [error, setError] = useState("");
-  const useNavigate = useNavigate();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
+
+  // Get email from Redux (set during forgot-password → OTP flow)
+  const { tempEmail } = useSelector((state) => state.auth);
+
+  const [resetPassword, { isLoading }] = useResetPasswordMutation();
 
   const update = (key, val) => setForm((p) => ({ ...p, [key]: val }));
 
@@ -30,7 +40,7 @@ export default function ResetPassword() {
   const strengthColor = ["", "bg-red-400", "bg-yellow-400", "bg-green-400", "bg-green-600"];
   const strength = getStrength(form.newPassword);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (form.newPassword.length < 8) {
       setError("Password must be at least 8 characters.");
@@ -40,9 +50,28 @@ export default function ResetPassword() {
       setError("Passwords do not match.");
       return;
     }
+    if (!tempEmail) {
+      toast.error("Session expired. Please start the forgot password flow again.");
+      navigate("/forgot-password");
+      return;
+    }
+
     setError("");
-    // Call API to reset password
-    setDone(true);
+
+    try {
+      const res = await resetPassword({
+        email: tempEmail,
+        newPassword: form.newPassword,
+        confirmPassword: form.confirmPassword,
+      }).unwrap();
+      toast.success(res.message || "Password reset successful!");
+      dispatch(clearTempData());
+      setDone(true);
+    } catch (err) {
+      const msg = err?.data?.message || "Password reset failed. Please try again.";
+      setError(msg);
+      toast.error(msg);
+    }
   };
 
   return (
@@ -144,9 +173,15 @@ export default function ResetPassword() {
                 {/* Submit */}
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                  disabled={isLoading}
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-700 to-emerald-500 text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  Reset Password ✓
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                      Resetting...
+                    </span>
+                  ) : "Reset Password ✓"}
                 </button>
               </form>
             </>
