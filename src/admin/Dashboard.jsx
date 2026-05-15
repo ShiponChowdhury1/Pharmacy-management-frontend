@@ -5,7 +5,6 @@ import {
   MdWarning,
   MdInventory,
   MdTrendingUp,
-  MdShoppingCart,
   MdPerson,
 } from 'react-icons/md'
 import {

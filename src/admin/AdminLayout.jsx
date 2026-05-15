@@ -7,6 +7,7 @@ import {
   MdPeople,
   MdPointOfSale,
   MdAssessment,
+  MdSettings,
   MdLogout,
   MdMenu,
   MdClose,
@@ -19,6 +20,7 @@ const sidebarLinks = [
   { to: '/admin/customers', label: 'Customers', icon: MdPeople },
   { to: '/admin/sales', label: 'Sales', icon: MdPointOfSale },
   { to: '/admin/reports', label: 'Reports', icon: MdAssessment },
+  { to: '/admin/settings', label: 'Settings', icon: MdSettings },
 ]
 
 export default function AdminLayout() {

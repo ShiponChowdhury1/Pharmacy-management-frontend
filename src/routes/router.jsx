@@ -1,12 +1,8 @@
 import { createBrowserRouter } from 'react-router-dom'
 import MainLayout from '../layouts/MainLayout'
 import Home from '../pages/Home'
-import NotFound from '../pages/NotFound'
-import Login from '../pages/Login'
-import Register from '../pages/Register'
-import OtpVerify from '../pages/OtpVerify'
-import ForgotPassword from '../pages/ForgotPassword'
-import ResetPassword from '../pages/ResetPassword'
+import Login from '../pages/auth/Login'
+import Register from '../pages/auth/Register'
 import AdminLayout from '../admin/AdminLayout'
 import Dashboard from '../admin/Dashboard'
 import Medicines from '../admin/Medicines'
@@ -14,6 +10,11 @@ import Suppliers from '../admin/Suppliers'
 import Customers from '../admin/Customers'
 import Sales from '../admin/Sales'
 import Reports from '../admin/Reports'
+import Settings from '../admin/Settings'
+import NotFound from '../shared/NotFound'
+import OtpVerify from '../pages/auth/Otpverify'
+import ForgotPassword from '../pages/auth/Forgotpassword'
+import ResetPassword from '../pages/auth/Resetpassword'
 
 const router = createBrowserRouter([
   {
@@ -41,6 +42,7 @@ const router = createBrowserRouter([
       { path: 'customers', element: <Customers /> },
       { path: 'sales', element: <Sales /> },
       { path: 'reports', element: <Reports /> },
+      { path: 'settings', element: <Settings /> },
     ],
   },
 ])
