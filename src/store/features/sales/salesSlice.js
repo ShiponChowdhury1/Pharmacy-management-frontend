@@ -2,10 +2,10 @@ import { createSlice } from "@reduxjs/toolkit"
 
 const initialState = {}
 
-const medicineSlice = createSlice({
-  name: "medicine",
+const salesSlice = createSlice({
+  name: "sales",
   initialState,
   reducers: {},
 })
 
-export default medicineSlice.reducer
+export default salesSlice.reducer

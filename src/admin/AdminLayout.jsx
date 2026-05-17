@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
+import { logout } from '../store/features/auth/authSlice'
 import {
   MdDashboard,
   MdMedication,
@@ -16,7 +18,7 @@ import {
 const sidebarLinks = [
   { to: '/admin', label: 'Dashboard', icon: MdDashboard, end: true },
   { to: '/admin/medicines', label: 'Medicines', icon: MdMedication },
-  { to: '/admin/suppliers', label: 'Suppliers', icon: MdLocalShipping },
+  // { to: '/admin/suppliers', label: 'Suppliers', icon: MdLocalShipping },
   { to: '/admin/customers', label: 'Customers', icon: MdPeople },
   { to: '/admin/sales', label: 'Sales', icon: MdPointOfSale },
   { to: '/admin/reports', label: 'Reports', icon: MdAssessment },
@@ -25,6 +27,14 @@ const sidebarLinks = [
 
 export default function AdminLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user } = useSelector((state) => state.auth)
+  const dispatch = useDispatch()
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    dispatch(logout())
+    navigate('/')
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -81,9 +91,29 @@ export default function AdminLayout() {
           ))}
         </nav>
 
-        {/* Logout */}
-        <div className="p-3 border-t border-gray-100">
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 w-full transition-all duration-150">
+        {/* User Info & Logout */}
+        <div className="p-3 border-t border-gray-100 flex flex-col gap-2">
+          {user && (
+            <div className="flex items-center gap-3 px-3 py-2">
+              {user?.profileImage || user?.avatar ? (
+                <img src={user.profileImage || user.avatar} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+              ) : (
+                <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                  {(user?.name?.charAt(0) || user?.firstName?.charAt(0) || 'U').toUpperCase()}
+                </div>
+              )}
+              <div className="overflow-hidden">
+                <p className="text-sm font-semibold text-gray-900 truncate">
+                  {user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '')}
+                </p>
+                <p className="text-[11px] text-gray-500 truncate">{user?.email}</p>
+              </div>
+            </div>
+          )}
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-600 w-full transition-all duration-150"
+          >
             <MdLogout className="text-lg" />
             <span>Logout</span>
           </button>
@@ -101,14 +131,32 @@ export default function AdminLayout() {
             <MdMenu className="text-2xl" />
           </button>
           <div className="lg:block hidden" />
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-semibold text-gray-900">Admin User</p>
-              <p className="text-xs text-gray-500">Administrator</p>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-semibold text-gray-900">
+                  {user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '')}
+                </p>
+                <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+              </div>
+              {user?.profileImage || user?.avatar ? (
+                <img src={user.profileImage || user.avatar} alt="Profile" className="w-9 h-9 rounded-full object-cover" />
+              ) : (
+                <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm shrink-0">
+                  {(user?.name?.charAt(0) || user?.firstName?.charAt(0) || 'U').toUpperCase()}
+                </div>
+              )}
             </div>
-            <div className="w-9 h-9 bg-blue-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-              A
-            </div>
+            
+            <div className="h-6 w-px bg-gray-200"></div>
+
+            <button
+              onClick={handleLogout}
+              className="text-gray-400 hover:text-red-500 transition-colors p-1"
+              title="Logout"
+            >
+              <MdLogout className="text-xl" />
+            </button>
           </div>
         </header>
 

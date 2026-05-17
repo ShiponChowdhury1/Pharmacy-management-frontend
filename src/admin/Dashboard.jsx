@@ -18,71 +18,70 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-
-const monthlySalesData = [
-  { name: 'Jan', sales: 32000 },
-  { name: 'Feb', sales: 28000 },
-  { name: 'Mar', sales: 45000 },
-  { name: 'Apr', sales: 52000 },
-  { name: 'May', sales: 61000 },
-  { name: 'Jun', sales: 72000 },
-]
-
-const stockData = [
-  { name: 'Pain Relief', stock: 450 },
-  { name: 'Vitamins', stock: 550 },
-  { name: 'Cold & Flu', stock: 280 },
-  { name: 'Diabetes', stock: 410 },
-]
-
-const recentTransactions = [
-  { id: 'TXN-001', customer: 'John Doe', amount: 124.50, time: '2 mins ago', status: 'Completed' },
-  { id: 'TXN-002', customer: 'Sarah Smith', amount: 89.00, time: '15 mins ago', status: 'Completed' },
-  { id: 'TXN-003', customer: 'Mike Johnson', amount: 210.75, time: '1 hour ago', status: 'Completed' },
-  { id: 'TXN-004', customer: 'Emily Brown', amount: 56.25, time: '2 hours ago', status: 'Pending' },
-  { id: 'TXN-005', customer: 'David Wilson', amount: 345.00, time: '3 hours ago', status: 'Completed' },
-]
-
-const statCards = [
-  {
-    icon: MdMedication,
-    iconBg: 'bg-blue-50',
-    iconColor: 'text-blue-600',
-    value: '1,234',
-    label: 'Total Medicines',
-    badge: '+12%',
-    badgeColor: 'text-green-600',
-  },
-  {
-    icon: MdAttachMoney,
-    iconBg: 'bg-amber-50',
-    iconColor: 'text-amber-600',
-    value: '$85,230',
-    label: 'Total Sales',
-    badge: '+18%',
-    badgeColor: 'text-green-600',
-  },
-  {
-    icon: MdPeople,
-    iconBg: 'bg-green-50',
-    iconColor: 'text-green-600',
-    value: '892',
-    label: 'Total Customers',
-    badge: '+5%',
-    badgeColor: 'text-green-600',
-  },
-  {
-    icon: MdWarning,
-    iconBg: 'bg-red-50',
-    iconColor: 'text-red-500',
-    value: '23',
-    label: 'Low Stock Items',
-    badge: 'Alert',
-    badgeColor: 'text-red-500',
-  },
-]
+import { useGetDashboardStatsQuery } from '../store/features/dashboard-stats/dashboardStatsApi'
 
 export default function Dashboard() {
+  const { data: response, isLoading, isError } = useGetDashboardStatsQuery()
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)] text-red-500">
+        Failed to load dashboard statistics.
+      </div>
+    )
+  }
+
+  const stats = response?.data || {}
+
+  const statCards = [
+    {
+      icon: MdMedication,
+      iconBg: 'bg-blue-50',
+      iconColor: 'text-blue-600',
+      value: stats.totalMedicines || 0,
+      label: 'Total Medicines',
+      badge: '',
+      badgeColor: 'text-green-600',
+    },
+    {
+      icon: MdAttachMoney,
+      iconBg: 'bg-amber-50',
+      iconColor: 'text-amber-600',
+      value: `$${(stats.totalSalesAmount || 0).toLocaleString()}`,
+      label: 'Total Sales',
+      badge: '',
+      badgeColor: 'text-green-600',
+    },
+    {
+      icon: MdPeople,
+      iconBg: 'bg-green-50',
+      iconColor: 'text-green-600',
+      value: stats.totalCustomers || 0,
+      label: 'Total Customers',
+      badge: '',
+      badgeColor: 'text-green-600',
+    },
+    {
+      icon: MdWarning,
+      iconBg: 'bg-red-50',
+      iconColor: 'text-red-500',
+      value: stats.lowStockItems || 0,
+      label: 'Low Stock Items',
+      badge: 'Alert',
+      badgeColor: 'text-red-500',
+    },
+  ]
+
+  const recentTransactions = stats.recentTransactions || []
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -102,7 +101,9 @@ export default function Dashboard() {
               <div className={`w-10 h-10 ${card.iconBg} rounded-lg flex items-center justify-center`}>
                 <card.icon className={`text-xl ${card.iconColor}`} />
               </div>
-              <span className={`text-xs font-semibold ${card.badgeColor}`}>{card.badge}</span>
+              {card.badge && (
+                <span className={`text-xs font-semibold ${card.badgeColor}`}>{card.badge}</span>
+              )}
             </div>
             <p className="text-2xl font-bold text-gray-900">{card.value}</p>
             <p className="text-sm text-gray-500 mt-0.5">{card.label}</p>
@@ -117,7 +118,7 @@ export default function Dashboard() {
             <MdInventory className="text-lg" />
             <span className="text-sm font-medium">Expired Medicines</span>
           </div>
-          <p className="text-3xl font-bold text-red-500">8</p>
+          <p className="text-3xl font-bold text-red-500">{stats.expiredMedicines || 0}</p>
           <p className="text-sm text-gray-500 mt-1">Remove from inventory</p>
         </div>
 
@@ -126,8 +127,10 @@ export default function Dashboard() {
             <MdTrendingUp className="text-lg" />
             <span className="text-sm font-medium">Monthly Revenue</span>
           </div>
-          <p className="text-3xl font-bold">$85,230</p>
-          <p className="text-sm mt-1 opacity-80">+18% from last month</p>
+          <p className="text-3xl font-bold">${(stats.monthlyRevenue || 0).toLocaleString()}</p>
+          <p className="text-sm mt-1 opacity-80">
+            {stats.revenueGrowth > 0 ? `+${stats.revenueGrowth}%` : `${stats.revenueGrowth || 0}%`} from last month
+          </p>
         </div>
 
         <div className="bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl p-5 text-white">
@@ -135,8 +138,8 @@ export default function Dashboard() {
             <MdAttachMoney className="text-lg" />
             <span className="text-sm font-medium">Today&apos;s Sales</span>
           </div>
-          <p className="text-3xl font-bold">$3,240</p>
-          <p className="text-sm mt-1 opacity-80">45 transactions</p>
+          <p className="text-3xl font-bold">${(stats.todaysSalesAmount || 0).toLocaleString()}</p>
+          <p className="text-sm mt-1 opacity-80">{stats.todaysTransactions || 0} transactions</p>
         </div>
       </div>
 
@@ -146,7 +149,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="text-base font-semibold text-gray-900 mb-4">Monthly Sales Trend</h3>
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={monthlySalesData}>
+            <LineChart data={stats.monthlySalesTrend || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#9ca3af" />
               <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
@@ -173,7 +176,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="text-base font-semibold text-gray-900 mb-4">Stock Overview by Category</h3>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={stockData}>
+            <BarChart data={stats.stockOverviewByCategory || []}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
               <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#9ca3af" />
               <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
@@ -184,7 +187,7 @@ export default function Dashboard() {
                   boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
                 }}
               />
-              <Bar dataKey="stock" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="value" fill="#ef4444" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -193,36 +196,48 @@ export default function Dashboard() {
       {/* Recent Transactions */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
         <h3 className="text-base font-semibold text-gray-900 mb-4">Recent Transactions</h3>
-        <div className="divide-y divide-gray-100">
-          {recentTransactions.map((txn) => (
-            <div key={txn.id} className="flex items-center justify-between py-3.5">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center">
-                  <MdPerson className="text-gray-500 text-lg" />
+        {recentTransactions.length > 0 ? (
+          <div className="divide-y divide-gray-100">
+            {recentTransactions.map((txn, i) => (
+              <div key={txn._id || txn.id || i} className="flex items-center justify-between py-3.5">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 bg-gray-100 rounded-full flex items-center justify-center">
+                    <MdPerson className="text-gray-500 text-lg" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">
+                      {txn.customer?.name || txn.customerName || txn.customer || 'Guest User'}
+                    </p>
+                    <p className="text-xs text-gray-400">#{txn._id || txn.id || `TXN-${i}`}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{txn.customer}</p>
-                  <p className="text-xs text-gray-400">#{txn.id}</p>
+                <div className="text-right flex items-center gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      ${(txn.totalAmount || txn.amount || 0).toFixed(2)}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      {txn.createdAt ? new Date(txn.createdAt).toLocaleDateString() : (txn.time || 'N/A')}
+                    </p>
+                  </div>
+                  <span
+                    className={`text-xs font-medium px-2.5 py-1 rounded-full ${
+                      (txn.status || '').toLowerCase() === 'completed'
+                        ? 'bg-green-50 text-green-600'
+                        : 'bg-amber-50 text-amber-600'
+                    }`}
+                  >
+                    {txn.status || 'Completed'}
+                  </span>
                 </div>
               </div>
-              <div className="text-right flex items-center gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">${txn.amount.toFixed(2)}</p>
-                  <p className="text-xs text-gray-400">{txn.time}</p>
-                </div>
-                <span
-                  className={`text-xs font-medium px-2.5 py-1 rounded-full ${
-                    txn.status === 'Completed'
-                      ? 'bg-green-50 text-green-600'
-                      : 'bg-amber-50 text-amber-600'
-                  }`}
-                >
-                  {txn.status}
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6 text-gray-500">
+            No recent transactions found.
+          </div>
+        )}
       </div>
     </div>
   )

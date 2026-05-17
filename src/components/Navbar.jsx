@@ -1,34 +1,32 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
+import { logout } from '../store/features/auth/authSlice'
 import {
   FaFacebookF,
   FaTwitter,
   FaInstagram,
   FaGooglePlusG,
-  FaSearch,
-  FaShoppingCart,
-  FaUser,
   FaBars,
   FaTimes,
-  FaTruck,
   FaChevronDown,
   FaPhone,
-  FaHeart,
 } from 'react-icons/fa'
 import { MdLocalPharmacy } from 'react-icons/md'
 
 const navLinks = [
   { label: 'Home', href: '/' },
-  { label: 'Shop', href: '/shop', hasDropdown: true },
-  { label: 'Page', href: '#', hasDropdown: true },
-  { label: 'Blog', href: '#' },
-  { label: 'On sale', href: '#', isSale: true },
+  { label: 'Features', href: '#features', hasDropdown: true },
+  { label: 'How It Works', href: '#how-it-works' },
+  { label: 'Pricing', href: '#pricing' },
   { label: 'Contact', href: '#contact' },
 ]
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const { isLoggedIn, user } = useSelector((state) => state.auth)
+  const dispatch = useDispatch()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 140)
@@ -47,12 +45,13 @@ export default function Navbar() {
 
   return (
     <header className="w-full relative z-50">
+
       {/* ====== TOP BAR ====== */}
       <div className="bg-gradient-to-r from-teal-600 via-teal-500 to-cyan-500 text-white text-xs sm:text-sm">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-9 sm:h-10">
           <div className="flex items-center gap-2">
-            <FaTruck className="text-[10px] sm:text-xs" />
-            <span className="tracking-wide">Free Shipping for all Order of $99</span>
+            <FaPhone className="text-[10px] sm:text-xs" />
+            <span className="tracking-wide">Support: 1-800-88-44-99</span>
           </div>
           <div className="hidden sm:flex items-center gap-4">
             <a href="#" className="hover:text-teal-200 transition-colors duration-200" aria-label="Facebook">
@@ -74,80 +73,76 @@ export default function Navbar() {
       {/* ====== MIDDLE BAR ====== */}
       <div className="bg-white border-b border-gray-100 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between gap-4 lg:gap-8">
+
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 shrink-0">
             <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center shadow-md shadow-teal-500/25">
               <MdLocalPharmacy className="text-white text-lg sm:text-xl" />
             </div>
             <span className="text-xl sm:text-2xl font-bold text-gray-800 tracking-tight">
-              Medi<span className="text-teal-500">lazar</span>
+              Pharma<span className="text-teal-500">Care</span>
             </span>
           </Link>
 
-          {/* Search Bar — Desktop */}
-          <div className="hidden md:flex flex-1 max-w-xl lg:max-w-2xl">
-            <div className="flex w-full rounded-full border-2 border-teal-500 overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
-              <input
-                type="text"
-                placeholder="Search..."
-                className="flex-1 px-5 py-2.5 text-sm text-gray-700 outline-none placeholder:text-gray-400"
-                id="navbar-search"
-              />
-              <button
-                className="bg-teal-500 hover:bg-teal-600 text-white px-6 transition-colors duration-200 flex items-center"
-                aria-label="Search"
-              >
-                <FaSearch className="text-sm" />
-              </button>
-            </div>
+          {/* Right Actions — Desktop */}
+          <div className="hidden lg:flex items-center gap-3 shrink-0">
+            {isLoggedIn && user ? (
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  {user.profileImage || user.avatar ? (
+                    <img src={user.profileImage || user.avatar} alt="Profile" className="w-8 h-8 rounded-full object-cover" />
+                  ) : (
+                    <div className="w-8 h-8 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                      {(user?.name?.charAt(0) || user?.firstName?.charAt(0) || 'U').toUpperCase()}
+                    </div>
+                  )}
+                  <div className="flex flex-col">
+                    <span className="text-sm font-semibold text-gray-800 leading-none">
+                      {user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '')}
+                    </span>
+                    <span className="text-[10px] text-gray-500 leading-none mt-1">{user.email}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => dispatch(logout())}
+                  className="px-4 py-1.5 text-sm font-semibold text-red-500 border border-red-200 rounded-full hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+                >
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="px-5 py-2 text-sm font-semibold text-teal-600 border-2 border-teal-500 rounded-full hover:bg-teal-50 transition-all duration-200"
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="px-5 py-2 text-sm font-semibold text-white bg-gradient-to-r from-teal-600 to-emerald-500 rounded-full shadow-md shadow-teal-500/25 hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
+                >
+                  Get Started Free
+                </Link>
+              </>
+            )}
           </div>
 
-          {/* Right Actions */}
-          <div className="flex items-center gap-3 sm:gap-5 shrink-0">
-            {/* Sign in / Sign up — Desktop */}
-            <div className="hidden lg:flex items-center gap-2 text-gray-600">
-              <FaUser className="text-base text-teal-500" />
-              <div className="text-sm leading-tight">
-                <Link to="/login" className="hover:text-teal-500 transition-colors duration-200">Sign in</Link>
-                <span className="text-gray-400"> / </span>
-                <Link to="/register" className="hover:text-teal-500 transition-colors duration-200">Sign up</Link>
-              </div>
-            </div>
-
-            {/* Wishlist */}
-            <button className="hidden sm:flex relative text-gray-600 hover:text-teal-500 transition-colors duration-200" aria-label="Wishlist">
-              <FaHeart className="text-lg" />
-              <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center font-bold">0</span>
-            </button>
-
-            {/* Cart */}
-            <div className="flex items-center gap-2 cursor-pointer group">
-              <div className="relative">
-                <FaShoppingCart className="text-lg sm:text-xl text-gray-600 group-hover:text-teal-500 transition-colors duration-200" />
-                <span className="absolute -top-2 -right-2 bg-teal-500 text-white text-[9px] sm:text-[10px] rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold">0</span>
-              </div>
-              <span className="text-sm font-semibold text-gray-800 hidden sm:inline">$0.00</span>
-            </div>
-
-            {/* Mobile Menu Toggle */}
-            <button
-              className="lg:hidden text-gray-700 hover:text-teal-500 transition-colors duration-200 p-1"
-              onClick={() => setMenuOpen(!menuOpen)}
-              aria-label="Toggle menu"
-              id="mobile-menu-toggle"
-            >
-              {menuOpen ? <FaTimes className="text-xl sm:text-2xl" /> : <FaBars className="text-xl sm:text-2xl" />}
-            </button>
-          </div>
+          {/* Mobile Menu Toggle */}
+          <button
+            className="lg:hidden text-gray-700 hover:text-teal-500 transition-colors duration-200 p-1"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Toggle menu"
+          >
+            {menuOpen ? <FaTimes className="text-xl sm:text-2xl" /> : <FaBars className="text-xl sm:text-2xl" />}
+          </button>
         </div>
       </div>
 
       {/* ====== BOTTOM NAV BAR — Desktop ====== */}
       <nav
         className={`bg-white border-b border-gray-200 hidden lg:block transition-all duration-300 ${
-          scrolled
-            ? 'fixed top-0 left-0 right-0 z-50 shadow-lg animate-slideDown'
-            : ''
+          scrolled ? 'fixed top-0 left-0 right-0 z-50 shadow-lg' : ''
         }`}
       >
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
@@ -156,25 +151,17 @@ export default function Navbar() {
               <li key={item.label} className="relative group">
                 <Link
                   to={item.href}
-                  className={`flex items-center gap-1 px-4 py-3.5 text-sm font-medium transition-colors duration-200 ${
-                    item.isSale
-                      ? 'text-red-500 hover:text-red-600'
-                      : 'text-gray-700 hover:text-teal-500'
-                  }`}
+                  className="flex items-center gap-1 px-4 py-3.5 text-sm font-medium text-gray-700 hover:text-teal-500 transition-colors duration-200"
                 >
                   {item.label}
                   {item.hasDropdown && <FaChevronDown className="text-[8px] ml-0.5 opacity-60" />}
-                  {item.isSale && (
-                    <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-sm font-bold uppercase tracking-wider ml-1">
-                      Sale
-                    </span>
-                  )}
                 </Link>
                 {/* Hover underline effect */}
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-teal-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></span>
+                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-teal-500 scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left" />
               </li>
             ))}
           </ul>
+
           <div className="flex items-center gap-2 text-gray-600 text-sm">
             <FaPhone className="text-teal-500 text-xs" />
             <span className="font-medium">1-800-88-44-99</span>
@@ -202,25 +189,11 @@ export default function Navbar() {
             <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
               <MdLocalPharmacy className="text-white text-lg" />
             </div>
-            <span className="text-lg font-bold text-white">Medilazar</span>
+            <span className="text-lg font-bold text-white">PharmaCare</span>
           </Link>
           <button onClick={() => setMenuOpen(false)} className="text-white/80 hover:text-white p-1">
             <FaTimes className="text-xl" />
           </button>
-        </div>
-
-        {/* Mobile Search */}
-        <div className="p-4 border-b border-gray-100">
-          <div className="flex rounded-full border-2 border-teal-500 overflow-hidden">
-            <input
-              type="text"
-              placeholder="Search..."
-              className="flex-1 px-4 py-2.5 text-sm outline-none"
-            />
-            <button className="bg-teal-500 text-white px-4">
-              <FaSearch className="text-sm" />
-            </button>
-          </div>
         </div>
 
         {/* Mobile Nav Links */}
@@ -229,32 +202,66 @@ export default function Navbar() {
             <Link
               key={item.label}
               to={item.href}
-              className={`flex items-center justify-between px-5 py-3.5 text-sm font-medium border-b border-gray-50 transition-colors duration-200 ${
-                item.isSale
-                  ? 'text-red-500 hover:bg-red-50'
-                  : 'text-gray-700 hover:bg-teal-50 hover:text-teal-500'
-              }`}
+              className="flex items-center justify-between px-5 py-3.5 text-sm font-medium border-b border-gray-50 text-gray-700 hover:bg-teal-50 hover:text-teal-500 transition-colors duration-200"
               onClick={() => setMenuOpen(false)}
             >
-              <span className="flex items-center gap-2">
-                {item.label}
-                {item.isSale && (
-                  <span className="bg-red-500 text-white text-[9px] px-1.5 py-0.5 rounded-sm font-bold">SALE</span>
-                )}
-              </span>
+              <span>{item.label}</span>
               {item.hasDropdown && <FaChevronDown className="text-[10px] text-gray-400" />}
             </Link>
           ))}
         </div>
 
-        {/* Mobile Auth */}
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center gap-3 mb-4 text-gray-600">
-            <FaUser className="text-teal-500" />
-            <Link to="/login" className="text-sm hover:text-teal-500" onClick={() => setMenuOpen(false)}>Sign in</Link>
-            <span className="text-gray-300">/</span>
-            <Link to="/register" className="text-sm hover:text-teal-500" onClick={() => setMenuOpen(false)}>Sign up</Link>
-          </div>
+        {/* Mobile Auth Buttons */}
+        <div className="p-4 space-y-3 border-t border-gray-100">
+          {isLoggedIn && user ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                {user.profileImage || user.avatar ? (
+                  <img src={user.profileImage || user.avatar} alt="Profile" className="w-10 h-10 rounded-full object-cover" />
+                ) : (
+                  <div className="w-10 h-10 bg-teal-100 text-teal-600 rounded-full flex items-center justify-center font-bold text-lg shrink-0">
+                    {(user?.name?.charAt(0) || user?.firstName?.charAt(0) || 'U').toUpperCase()}
+                  </div>
+                )}
+                <div className="overflow-hidden">
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {user?.name || (user?.firstName ? `${user.firstName} ${user.lastName || ''}`.trim() : '')}
+                  </p>
+                  <p className="text-xs text-gray-500 truncate">{user.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  dispatch(logout())
+                  setMenuOpen(false)
+                }}
+                className="block w-full text-center py-2.5 text-sm font-semibold text-red-500 border-2 border-red-200 rounded-full hover:bg-red-50 transition-all duration-200"
+              >
+                Logout
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+                className="block w-full text-center py-2.5 text-sm font-semibold text-teal-600 border-2 border-teal-500 rounded-full hover:bg-teal-50 transition-all duration-200"
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMenuOpen(false)}
+                className="block w-full text-center py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-teal-600 to-emerald-500 rounded-full shadow-md transition-all duration-200"
+              >
+                Get Started Free
+              </Link>
+            </>
+          )}
+        </div>
+
+        {/* Mobile Phone */}
+        <div className="px-4 pb-4">
           <div className="flex items-center gap-3 text-gray-600">
             <FaPhone className="text-teal-500 text-sm" />
             <span className="text-sm">1-800-88-44-99</span>
@@ -263,7 +270,7 @@ export default function Navbar() {
 
         {/* Mobile Social */}
         <div className="px-4 pb-6">
-          <div className="flex items-center gap-3 mt-4">
+          <div className="flex items-center gap-3 mt-2">
             {[FaFacebookF, FaTwitter, FaInstagram, FaGooglePlusG].map((Icon, i) => (
               <a
                 key={i}

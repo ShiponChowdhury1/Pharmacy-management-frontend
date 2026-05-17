@@ -1,5 +1,11 @@
 import { motion } from 'framer-motion'
-import { FaPaperPlane } from 'react-icons/fa'
+import { FaArrowRight, FaCheckCircle } from 'react-icons/fa'
+
+const perks = [
+  'No credit card required',
+  'Free 14-day trial',
+  'Cancel anytime',
+]
 
 export default function Newsletter() {
   return (
@@ -12,23 +18,41 @@ export default function Newsletter() {
       </div>
 
       <div className="max-w-3xl mx-auto px-4 text-center relative z-10">
-        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">Sign Up For Newsletter</h2>
-          <p className="text-teal-100 text-sm sm:text-base mb-8">Get the latest health tips, exclusive offers and updates delivered to your inbox.</p>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+        >
+          <span className="inline-block bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-4 py-1.5 rounded-full mb-4">
+            ✦ Get Started Today
+          </span>
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3">
+            Ready to Modernize Your Pharmacy?
+          </h2>
+          <p className="text-teal-100 text-sm sm:text-base mb-6">
+            Join 500+ pharmacies already using PharmaCare to manage smarter.
+          </p>
 
-          <form onSubmit={(e) => e.preventDefault()} className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
-            <input
-              type="email"
-              placeholder="Enter your email address..."
-              className="flex-1 px-5 py-3 sm:py-3.5 rounded-full text-sm text-gray-700 outline-none focus:ring-2 focus:ring-white/50 shadow-lg"
-              id="newsletter-email"
-            />
-            <button type="submit"
-              className="bg-gray-900 hover:bg-gray-800 text-white px-6 sm:px-8 py-3 sm:py-3.5 rounded-full text-sm font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
-              <FaPaperPlane className="text-xs" />
-              Subscribe
+          {/* Perks */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 mb-8">
+            {perks.map((perk, i) => (
+              <div key={i} className="flex items-center gap-2 text-white text-sm font-medium">
+                <FaCheckCircle className="text-white/80 text-base" />
+                {perk}
+              </div>
+            ))}
+          </div>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <button className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-3.5 rounded-full text-sm font-bold flex items-center gap-2 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
+              Start Free Trial
+              <FaArrowRight className="text-xs" />
             </button>
-          </form>
+            <button className="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-8 py-3.5 rounded-full text-sm font-bold transition-all duration-300 border border-white/30">
+              Login to Dashboard
+            </button>
+          </div>
         </motion.div>
       </div>
     </section>

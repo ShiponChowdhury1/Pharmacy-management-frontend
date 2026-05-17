@@ -1,56 +1,99 @@
 import { useState } from 'react'
 import { MdAdd, MdDelete, MdPrint, MdSave } from 'react-icons/md'
+import { useGetCustomersQuery } from '../store/features/customers/customersApi'
+import { useGetMedicinesQuery } from '../store/features/medicine/medicineApi'
+import { useAddSaleMutation } from '../store/features/sales/salesApi'
+import toast from 'react-hot-toast'
 
-const customersList = ['John Doe', 'Sarah Smith', 'Mike Johnson', 'Emily Brown', 'David Wilson']
 const paymentMethods = ['Cash', 'Card', 'Online']
 
-const medicinesList = [
-  { id: 1, name: 'Amoxicillin 500mg', price: 12.50 },
-  { id: 2, name: 'Ibuprofen 400mg', price: 8.75 },
-  { id: 3, name: 'Vitamin D3 1000IU', price: 15.00 },
-  { id: 4, name: 'Paracetamol 500mg', price: 6.25 },
-  { id: 5, name: 'Metformin 850mg', price: 22.00 },
-  { id: 6, name: 'Cetirizine 10mg', price: 9.50 },
-  { id: 7, name: 'Omeprazole 20mg', price: 18.75 },
-  { id: 8, name: 'Aspirin 75mg', price: 5.50 },
-]
-
 export default function Sales() {
-  const [customer, setCustomer] = useState('John Doe')
+  const { data: customerRes } = useGetCustomersQuery()
+  const customersList = customerRes?.data || []
+
+  const { data: medRes } = useGetMedicinesQuery()
+  const medicinesList = medRes?.data || []
+
+  const [addSale, { isLoading: isSelling }] = useAddSaleMutation()
+
+  const [customer, setCustomer] = useState('')
   const [payment, setPayment] = useState('Cash')
   const [selectedMedicine, setSelectedMedicine] = useState('')
   const [quantity, setQuantity] = useState(1)
-  const [items, setItems] = useState([
-    { id: 2, name: 'Ibuprofen 400mg', qty: 8, price: 8.75 },
-  ])
+  const [items, setItems] = useState([])
 
   const invoiceNumber = `INV-${Math.floor(Math.random() * 900000 + 100000)}`
   const today = new Date().toLocaleDateString('en-US')
 
   const handleAdd = () => {
     if (!selectedMedicine) return
-    const med = medicinesList.find((m) => m.id === parseInt(selectedMedicine))
+    const med = medicinesList.find((m) => m._id === selectedMedicine)
     if (!med) return
 
-    const existing = items.find((item) => item.id === med.id)
+    if (quantity > med.quantity) {
+      toast.error(`Only ${med.quantity} ${med.unit || 'pcs'} available`)
+      return
+    }
+
+    const existing = items.find((item) => item.medicineId === med._id)
     if (existing) {
+      if (existing.qty + quantity > med.quantity) {
+        toast.error(`Exceeds available stock. Available: ${med.quantity}`)
+        return
+      }
       setItems(items.map((item) =>
-        item.id === med.id ? { ...item, qty: item.qty + quantity } : item
+        item.medicineId === med._id ? { ...item, qty: item.qty + quantity } : item
       ))
     } else {
-      setItems([...items, { id: med.id, name: med.name, qty: quantity, price: med.price }])
+      setItems([...items, { medicineId: med._id, name: med.name, qty: quantity, price: med.price }])
     }
     setSelectedMedicine('')
     setQuantity(1)
   }
 
   const handleRemove = (id) => {
-    setItems(items.filter((item) => item.id !== id))
+    setItems(items.filter((item) => item.medicineId !== id))
   }
 
   const subtotal = items.reduce((sum, item) => sum + item.qty * item.price, 0)
   const tax = subtotal * 0.10
   const total = subtotal + tax
+
+  const handleCompleteSale = async () => {
+    if (!customer) {
+      toast.error("Please select a customer")
+      return
+    }
+    if (items.length === 0) {
+      toast.error("Please add at least one item")
+      return
+    }
+
+    try {
+      const saleData = {
+        customer,
+        items: items.map(i => ({ medicine: i.medicineId, quantity: i.qty, price: i.price })),
+        paymentMethod: payment,
+        subTotal: subtotal,
+        tax,
+        total,
+        paid: total,
+        due: 0
+      }
+      const res = await addSale(saleData).unwrap()
+      if (res.success) {
+        toast.success("Sale completed successfully")
+        setItems([])
+        setCustomer('')
+        setSelectedMedicine('')
+        setQuantity(1)
+      } else {
+        toast.error("Failed to complete sale")
+      }
+    } catch (error) {
+      toast.error(error?.data?.message || error?.message || "Failed to complete sale")
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -74,8 +117,9 @@ export default function Sales() {
                   onChange={(e) => setCustomer(e.target.value)}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
                 >
+                  <option value="">Choose a customer...</option>
                   {customersList.map((c) => (
-                    <option key={c} value={c}>{c}</option>
+                    <option key={c._id} value={c._id}>{c.name} {c.phone ? `(${c.phone})` : ''}</option>
                   ))}
                 </select>
               </div>
@@ -107,7 +151,7 @@ export default function Sales() {
                 >
                   <option value="">Choose a medicine...</option>
                   {medicinesList.map((med) => (
-                    <option key={med.id} value={med.id}>{med.name}</option>
+                    <option key={med._id} value={med._id}>{med.name} - ${med.price} ({med.quantity} {med.unit} left)</option>
                   ))}
                 </select>
               </div>
@@ -124,7 +168,8 @@ export default function Sales() {
               <div className="flex items-end">
                 <button
                   onClick={handleAdd}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
+                  disabled={!selectedMedicine}
+                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2.5 rounded-lg text-sm font-medium transition-colors w-full sm:w-auto justify-center"
                 >
                   <MdAdd className="text-lg" />
                   Add
@@ -147,13 +192,13 @@ export default function Sales() {
                   </thead>
                   <tbody>
                     {items.map((item) => (
-                      <tr key={item.id} className="border-b border-gray-100">
+                      <tr key={item.medicineId} className="border-b border-gray-100">
                         <td className="py-3 text-sm text-gray-900">{item.name}</td>
                         <td className="py-3 text-sm text-gray-600 text-center">{item.qty}</td>
                         <td className="py-3 text-sm text-gray-600 text-center">${item.price.toFixed(2)}</td>
                         <td className="py-3 text-sm font-semibold text-gray-900 text-center">${(item.qty * item.price).toFixed(2)}</td>
                         <td className="py-3 text-center">
-                          <button onClick={() => handleRemove(item.id)} className="text-red-500 hover:text-red-700 transition-colors">
+                          <button onClick={() => handleRemove(item.medicineId)} className="text-red-500 hover:text-red-700 transition-colors">
                             <MdDelete className="text-lg" />
                           </button>
                         </td>
@@ -181,10 +226,6 @@ export default function Sales() {
                 <p className="text-sm font-medium text-gray-900">{today}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-400">Customer</p>
-                <p className="text-sm font-medium text-gray-900">{customer}</p>
-              </div>
-              <div>
                 <p className="text-xs text-gray-400">Payment Method</p>
                 <p className="text-sm font-medium text-gray-900">{payment}</p>
               </div>
@@ -206,9 +247,13 @@ export default function Sales() {
             </div>
 
             <div className="mt-5 space-y-2">
-              <button className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg text-sm font-medium transition-colors">
+              <button 
+                onClick={handleCompleteSale}
+                disabled={isSelling || items.length === 0}
+                className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white py-2.5 rounded-lg text-sm font-medium transition-colors"
+                >
                 <MdSave className="text-lg" />
-                Complete Sale
+                {isSelling ? 'Processing...' : 'Complete Sale'}
               </button>
               <button className="w-full flex items-center justify-center gap-2 border border-gray-200 text-gray-700 hover:bg-gray-50 py-2.5 rounded-lg text-sm font-medium transition-colors">
                 <MdPrint className="text-lg" />
